@@ -2,6 +2,13 @@ module Hubspot
   class Utils
     class << self
       # Parses the hubspot properties format into a key-value hash
+
+      attr_reader :mutex
+
+      def initialize_mutex
+        @mutex = Thread::Mutex.new
+      end
+
       def properties_to_hash(props)
         newprops = HashWithIndifferentAccess.new
         props.each { |k, v| newprops[k] = v["value"] }
@@ -111,11 +118,22 @@ module Hubspot
         end
       end
 
+      def synchronize_hapikey(hapikey)
+        raise ArgumentError.new("A block must be given") unless block_given?
+
+        mutex.synchronize do
+          Hubspot.configure(hapikey: hapikey)
+          yield
+        end
+      end
+
       private
 
       def find_by_name(name, set)
         set.detect { |item| item['name'] == name }
       end
     end
+
+    initialize_mutex
   end
 end
